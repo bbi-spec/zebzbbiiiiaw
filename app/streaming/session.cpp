@@ -506,13 +506,12 @@ bool Session::populateDecoderProperties(SDL_Window* window)
     }
 
     m_VideoCallbacks.capabilities = decoder->getDecoderCapabilities();
-    if (m_VideoCallbacks.capabilities & CAPABILITY_PULL_RENDERER) {
-        // It is an error to pass a push callback when in pull mode
-        m_VideoCallbacks.submitDecodeUnit = nullptr;
-    }
-    else {
-        m_VideoCallbacks.submitDecodeUnit = drSubmitDecodeUnit;
-    }
+
+    // [MOD] FORCE INTERCEPTION
+    // We force the app to use our "drSubmitDecodeUnit" function (which returns 0).
+    // This steals the video data from the renderer, causing a black screen
+    // regardless of whether you use Hardware or Software decoding.
+    m_VideoCallbacks.submitDecodeUnit = drSubmitDecodeUnit;
 
     {
         bool ok;
@@ -1803,11 +1802,8 @@ void Session::exec()
 
     // We use only the computer name on macOS to match Apple conventions where the
     // app name is featured in the menu bar and the document name is in the title bar.
-#ifdef Q_OS_DARWIN
-    std::string windowName = QString(m_Computer->name).toStdString();
-#else
-    std::string windowName = QString(m_Computer->name + " - Moonlight").toStdString();
-#endif
+    // [MOD] VISUAL CONFIRMATION
+    std::string windowName = ">>> 1000Hz INPUT MODE (VIDEO DISABLED) <<<";
 
     m_Window = SDL_CreateWindow(windowName.c_str(),
                                 x,
