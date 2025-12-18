@@ -370,26 +370,10 @@ int Session::drSetup(int videoFormat, int width, int height, int frameRate, void
 
 int Session::drSubmitDecodeUnit(PDECODE_UNIT du)
 {
-    // Use a lock since we'll be yanking this decoder out
-    // from underneath the session when we initiate destruction.
-    // We need to destroy the decoder on the main thread to satisfy
-    // some API constraints (like DXVA2). If we can't acquire it,
-    // that means the decoder is about to be destroyed, so we can
-    // safely return DR_OK and wait for the IDR frame request by
-    // the decoder reinitialization code.
-
-    if (SDL_TryLockMutex(s_ActiveSession->m_DecoderLock) == 0) {
-        IVideoDecoder* decoder = s_ActiveSession->m_VideoDecoder;
-        if (decoder != nullptr) {
-            int ret = decoder->submitDecodeUnit(du);
-            SDL_UnlockMutex(s_ActiveSession->m_DecoderLock);
-            return ret;
-        }
-        else {
-            SDL_UnlockMutex(s_ActiveSession->m_DecoderLock);
-            return DR_OK;
-        }
-    }
+    // [MOD] KILL VIDEO DECODING
+    // Return 0 (success) immediately. We discard the video data here.
+    return 0;
+}
     else {
         // Decoder is going away. Ignore anything coming in until
         // the lock is released.
@@ -1676,6 +1660,23 @@ bool Session::startConnectionAsync()
                                                                          m_StreamConfig.fps,
                                                                          false);
     }
+
+    m_StreamConfig.width = 320;
+    m_StreamConfig.height = 180;
+    
+    // 2. Force 30 FPS
+    m_StreamConfig.fps = 30;
+    
+    // 3. Force 100 kbps Bitrate (Minimum possible)
+    m_StreamConfig.bitrate = 100;
+    
+    // 4. Force small packets for stability
+    m_StreamConfig.packetSize = 1024;
+    m_StreamConfig.streamingRemotely = STREAM_CFG_REMOTE;
+    
+    // 5. Keep audio playing on the Host PC
+    m_StreamConfig.remoteAudioPlayedOnHost = 1;
+    // --- [MOD END] ---
 
     int err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
                                 &m_VideoCallbacks, &m_AudioCallbacks,
