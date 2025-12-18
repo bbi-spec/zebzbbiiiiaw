@@ -495,7 +495,7 @@ bool Session::populateDecoderProperties(SDL_Window* window)
 {
     IVideoDecoder* decoder;
 
-    if (!chooseDecoder(m_Preferences->videoDecoderSelection,
+    if (!chooseDecoder(StreamingPreferences::VDS_FORCE_SOFTWARE,
                        window,
                        m_SupportedVideoFormats.first(),
                        m_StreamConfig.width,
@@ -506,12 +506,13 @@ bool Session::populateDecoderProperties(SDL_Window* window)
     }
 
     m_VideoCallbacks.capabilities = decoder->getDecoderCapabilities();
-
-    // [MOD] FORCE INTERCEPTION
-    // We force the app to use our "drSubmitDecodeUnit" function (which returns 0).
-    // This steals the video data from the renderer, causing a black screen
-    // regardless of whether you use Hardware or Software decoding.
-    m_VideoCallbacks.submitDecodeUnit = drSubmitDecodeUnit;
+    if (m_VideoCallbacks.capabilities & CAPABILITY_PULL_RENDERER) {
+        // It is an error to pass a push callback when in pull mode
+        m_VideoCallbacks.submitDecodeUnit = nullptr;
+    }
+    else {
+        m_VideoCallbacks.submitDecodeUnit = drSubmitDecodeUnit;
+    }
 
     {
         bool ok;
