@@ -370,15 +370,12 @@ int Session::drSetup(int videoFormat, int width, int height, int frameRate, void
 
 int Session::drSubmitDecodeUnit(PDECODE_UNIT du)
 {
+    // [MOD] FIX: Mark 'du' as unused to stop the warning
+    (void)du;
+
     // [MOD] KILL VIDEO DECODING
-    // Return 0 (success) immediately. We discard the video data here.
+    // Return 0 (success) immediately.
     return 0;
-}
-    else {
-        // Decoder is going away. Ignore anything coming in until
-        // the lock is released.
-        return DR_OK;
-    }
 }
 
 void Session::getDecoderInfo(SDL_Window* window,
@@ -1675,7 +1672,6 @@ bool Session::startConnectionAsync()
     m_StreamConfig.streamingRemotely = STREAM_CFG_REMOTE;
     
     // 5. Keep audio playing on the Host PC
-    m_StreamConfig.remoteAudioPlayedOnHost = 1;
     // --- [MOD END] ---
 
     int err = LiStartConnection(&hostInfo, &m_StreamConfig, &k_ConnCallbacks,
